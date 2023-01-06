@@ -24,10 +24,24 @@
 ## 待处理问题
     package.json中bin命令不生效
 
-
 ### 注意事项
     1.excel可以放在任何位置 -i后面的值一定要是绝对路径 -o后面的值也要是绝对路径
-
+    2.key不能这样💥💥💥💥💥💥💥💥💥💥💥💥
+            key                  en            zh
+        aside.project         my-project     我的项目
+        aside.project.a       my-project-a   我的项目a
+        aside.project.b       my-project-b   我的项目b
+        这样写报一个Cannot create property 'playable' on string 'xxxxxxxxx' ！！！！！！！
+        原因是：
+        aside.project的结构是  =====》aside:{
+                                            project:my-project
+                                        }
+        aside.project.a的结构是 =====》aside:{
+                                            project:{
+                                                a:my-project-a
+                                            }
+                                        }
+        这样子把project从一个字符串变成了一个对象，会导致project原来的值丢失从而引发报错
 
 # 目录结构
     --src 

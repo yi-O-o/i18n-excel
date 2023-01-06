@@ -41,9 +41,9 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
   }
   let curDocName: string | null = null;
   const keyIndex = trMap.get("key");
-  excelData.forEach((item: string[], index: number) => {
+  excelData.every((item: string[], index: number) => {
     if (index === 0) {
-      return;
+      return true;
     } else {
       if (item[trMap.get("documentName")]) {
         if (curDocName) {
@@ -56,19 +56,20 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
             );
           });
         }
+        //跳出循环
         if (item[trMap.get("documentName")] === "end") {
-          return;
+          return false;
         }
         curDocName = item[trMap.get("documentName")];
 
-        for (const key in resultObj) {
+        for (const key in  resultObj) {
           resultObj[key] = {};
         }
       }
       //增加数据
       const key = item[keyIndex];
       if (!key) {
-        throw new Error(`在${item}那一行的key为空 `);
+        throw new Error(`在${index + 1}那一行，内容是${item}，的key为空 `);
       }
       const keyArr = key.split(".");
       lang.forEach((langItem) => {
@@ -91,5 +92,7 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
         }, resultObj[langItem]);
       });
     }
+    return true
   });
+    console.log("------翻译成功-----");
 }

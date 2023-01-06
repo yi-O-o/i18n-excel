@@ -14,9 +14,6 @@ function i18nExcel({ inDir, outDir, name, lang }) {
     excelFilePath = inDir;
     outFolderPath = path_1.default.join(outDir, name);
     const { data: excelData } = node_xlsx_1.default.parse(excelFilePath)[0];
-    if (!fs_1.default.existsSync(excelFilePath)) {
-        throw new Error("excel文件不存在，请检查输入路径");
-    }
     const outFolderExists = fs_1.default.existsSync(outFolderPath);
     if (!outFolderExists) {
         //文件夹不存在
@@ -45,9 +42,9 @@ function i18nExcel({ inDir, outDir, name, lang }) {
     }
     let curDocName = null;
     const keyIndex = trMap.get("key");
-    excelData.forEach((item, index) => {
+    excelData.every((item, index) => {
         if (index === 0) {
-            return;
+            return true;
         }
         else {
             if (item[trMap.get("documentName")]) {
@@ -58,8 +55,9 @@ function i18nExcel({ inDir, outDir, name, lang }) {
                         fs_1.default.writeFileSync(path_1.default.join(outFolderPath, fold, curDocName) + ".js", `export default ${writeData}`);
                     });
                 }
+                //跳出循环
                 if (item[trMap.get("documentName")] === "end") {
-                    return;
+                    return false;
                 }
                 curDocName = item[trMap.get("documentName")];
                 for (const key in resultObj) {
@@ -69,7 +67,7 @@ function i18nExcel({ inDir, outDir, name, lang }) {
             //增加数据
             const key = item[keyIndex];
             if (!key) {
-                throw new Error(`在${item}那一行的key为空 `);
+                throw new Error(`在${index + 1}那一行，内容是${item}，的key为空 `);
             }
             const keyArr = key.split(".");
             lang.forEach((langItem) => {
@@ -79,7 +77,7 @@ function i18nExcel({ inDir, outDir, name, lang }) {
                             throw new Error(`在${item}key值是${key},${langItem}语言的值为空`);
                         }
                         if (perv[keyItem]) {
-                            throw new Error(`key值是${key}重复,key在同一个documentName应该唯一`);
+                            throw new Error(`在${item}那一行,key值重复了,key在同一个documentName应该唯一`);
                         }
                         return (perv[keyItem] = item[trMap.get(langItem)]);
                     }
@@ -90,7 +88,9 @@ function i18nExcel({ inDir, outDir, name, lang }) {
                 }, resultObj[langItem]);
             });
         }
+        return true;
     });
+    console.log("------翻译成功-----");
 }
 exports.i18nExcel = i18nExcel;
 //# sourceMappingURL=excel.js.map
