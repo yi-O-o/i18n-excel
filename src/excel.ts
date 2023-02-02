@@ -1,4 +1,5 @@
 import xlsx from "node-xlsx";
+import { execSync } from "child_process";
 import type { CommanderQuery } from "./type";
 import path from "path";
 import fs from "fs";
@@ -15,10 +16,11 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
   const { data: excelData }: any = xlsx.parse(excelFilePath)[0];
 
   const outFolderExists = fs.existsSync(outFolderPath);
-  if (!outFolderExists) {
-    //文件夹不存在
-    fs.mkdirSync(outFolderPath);
+  if (outFolderExists) {
+    //文件夹存在删除掉
+    removeDir(outFolderPath);
   }
+  fs.mkdirSync(outFolderPath);
   let outFolder = fs.readdirSync(outFolderPath);
   lang.forEach((item) => {
     !outFolder.includes(item) && fs.mkdirSync(path.join(outFolderPath, item));
@@ -50,10 +52,20 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
           //把之前上一个文件的数据收集起来放进去
           outFolder.forEach((fold) => {
             const writeData = JSON.stringify(resultObj[fold], undefined, "\t");
-            fs.writeFileSync(
-              path.join(outFolderPath, fold, curDocName!) + ".js",
-              `export default ${writeData}`
-            );
+            const writePath =
+              path.join(outFolderPath, fold, curDocName!) + ".js";
+            //支持documentName同名情况
+            if (fs.existsSync(writePath)) {
+              //如果有同名追加进去
+              execSync(`sed -i '' -e '$d' ${curDocName}.js`, {
+                cwd: path.join(outFolderPath, fold),
+              });
+              fs.writeFileSync(writePath, `,${writeData.slice(1)}`, {
+                flag: "a",
+              });
+            } else {
+              fs.writeFileSync(writePath, `export default ${writeData}`);
+            }
           });
         }
         //跳出循环
@@ -62,7 +74,7 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
         }
         curDocName = item[trMap.get("documentName")];
 
-        for (const key in  resultObj) {
+        for (const key in resultObj) {
           resultObj[key] = {};
         }
       }
@@ -92,7 +104,25 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
         }, resultObj[langItem]);
       });
     }
-    return true
+    return true;
   });
-    console.log("------翻译成功-----");
+  console.log("------翻译成功-----");
+}
+
+/**
+ * 删除文件夹
+ * dir:文件夹路径
+ */
+function removeDir(dir: string) {
+  const files = fs.readdirSync(dir);
+  for (const key in files) {
+    const childPath = path.join(dir, files[key]);
+    const childState = fs.statSync(childPath);
+    if (childState.isDirectory()) {
+      removeDir(childPath);
+    } else {
+      fs.unlinkSync(childPath);
+    }
+  }
+  fs.rmdirSync(dir);
 }

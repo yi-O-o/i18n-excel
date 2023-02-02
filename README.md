@@ -25,7 +25,7 @@
     package.json中bin命令不生效
 
 ### 注意事项
-    1.excel可以放在任何位置 -i后面的值一定要是绝对路径 -o后面的值也要是绝对路径
+    1.excel可以放在任何位置 -i后面的值一定要是绝对路径 -o后面的值也要是绝对路径。
     2.key不能这样💥💥💥💥💥💥💥💥💥💥💥💥
             key                  en            zh
         aside.project         my-project     我的项目
@@ -42,6 +42,7 @@
                                             }
                                         }
         这样子把project从一个字符串变成了一个对象，会导致project原来的值丢失从而引发报错
+    3.支持documentName同名，如果documentName同名则会追加内容。
 
 # 目录结构
     --src 
