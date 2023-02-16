@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.i18nExcel = void 0;
 const tslib_1 = require("tslib");
 const node_xlsx_1 = tslib_1.__importDefault(require("node-xlsx"));
 const lodash_1 = tslib_1.__importDefault(require("lodash"));
@@ -13,7 +12,13 @@ const resultObj = {};
 const trMap = new Map();
 //为什么要用map不用object 因为map有序
 const resultMap = new Map(); //收集数据
-function i18nExcel({ inDir, outDir, name, lang }) {
+function i18nExcel(option) {
+    const { inDir, outDir, name, lang } = Object.assign({
+        inDir: path_1.default.join("./", "i18n-land.xlsx"),
+        outDir: path_1.default.join("./"),
+        name: "i18n-land",
+        lang: ["zh", "en"],
+    }, option);
     excelFilePath = inDir;
     outFolderPath = path_1.default.join(outDir, name);
     const { data: excelData } = node_xlsx_1.default.parse(excelFilePath)[0];
@@ -52,9 +57,9 @@ function i18nExcel({ inDir, outDir, name, lang }) {
         else {
             if (item[trMap.get("documentName")]) {
                 if (curDocName) {
-                    //把之前上一个文件的数据收集起来放进去
                     if (resultMap.has(curDocName)) {
                         //追加
+                        console.log("curDocName", curDocName);
                         const pervDocVal = resultMap.get(curDocName);
                         resultMap.set(curDocName, lodash_1.default.merge(pervDocVal, resultObj));
                     }
@@ -107,7 +112,7 @@ function i18nExcel({ inDir, outDir, name, lang }) {
     });
     console.log("------翻译成功-----");
 }
-exports.i18nExcel = i18nExcel;
+exports.default = i18nExcel;
 /**
  * 删除文件夹
  * dir:文件夹路径

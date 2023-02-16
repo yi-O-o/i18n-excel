@@ -1,6 +1,6 @@
 import xlsx from "node-xlsx";
-import type { CommanderQuery } from "./type";
 import _ from "lodash";
+import type { CommanderQuery } from "./type";
 import path from "path";
 import fs from "fs";
 let excelFilePath: string;
@@ -12,7 +12,16 @@ const resultObj: {
 const trMap = new Map();
 //为什么要用map不用object 因为map有序
 const resultMap = new Map(); //收集数据
-export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
+export default function i18nExcel(option: CommanderQuery) {
+  const { inDir, outDir, name, lang } = Object.assign(
+    {
+      inDir: path.join("./", "i18n-land.xlsx"),
+      outDir: path.join("./"),
+      name: "i18n-land",
+      lang: ["zh", "en"],
+    },
+    option
+  );
   excelFilePath = inDir;
   outFolderPath = path.join(outDir, name);
   const { data: excelData }: any = xlsx.parse(excelFilePath)[0];
@@ -50,10 +59,9 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
     } else {
       if (item[trMap.get("documentName")]) {
         if (curDocName) {
-          //把之前上一个文件的数据收集起来放进去
           if (resultMap.has(curDocName)) {
-            console.log("curDocName", curDocName);
             //追加
+            console.log("curDocName", curDocName);
             const pervDocVal = resultMap.get(curDocName);
             resultMap.set(curDocName, _.merge(pervDocVal, resultObj));
           } else {
