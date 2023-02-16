@@ -23,9 +23,10 @@
 
 ### 执行脚本：在命令行中执行
 
-    node ./build/bin.js -i [excel文件的位置] -o [输出被转化好文件夹的位置] -n [输出文件夹的名字] -l[需要翻译的字段] 
     //都有默认值 -i的默认值是当前目录下的i18n-land.xlsx文件 -o的默认值是当前目录 -n的默认值是i18n-land -l的默认值是'en','zh'
+    node ./build/bin.js -i [excel文件的位置] -o [输出被转化好文件夹的位置] -n [输出文件夹的名字] -l[需要翻译的字段] 
 
+    可以这样直接执行 node ./build/bin.js但是确保当前文件目录下有i18n-land.xlsx这个文件 导出也是直接导出到当前文件目录下
 ### 执行脚本：项目中使用
 
     在package.json中引入这个项目："i18nExcel":"git@gitlab.mobvista.com:playable/i18n-excel.git"
