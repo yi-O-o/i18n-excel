@@ -1,6 +1,6 @@
 import xlsx from "node-xlsx";
-import { execSync } from "child_process";
 import type { CommanderQuery } from "./type";
+import _ from "lodash";
 import path from "path";
 import fs from "fs";
 let excelFilePath: string;
@@ -10,6 +10,8 @@ const resultObj: {
   [key: string]: any;
 } = {};
 const trMap = new Map();
+//为什么要用map不用object 因为map有序
+const resultMap = new Map(); //收集数据
 export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
   excelFilePath = inDir;
   outFolderPath = path.join(outDir, name);
@@ -33,11 +35,10 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
       throw new Error(`excel格式错误,应该要有${needFindKey[i]}字段`);
     } else {
       if (!trMap.has(needFindKey[i])) {
-        trMap.set(needFindKey[i], index);
-        needFindKey[i] !== "documentName" &&
-          Object.assign(resultObj, {
-            [needFindKey[i]]: {},
-          });
+        trMap.set(needFindKey[i], index as number);
+        if (!["key", "documentName"].includes(needFindKey[i])) {
+          resultObj[needFindKey[i]] = {};
+        }
       }
     }
   }
@@ -50,26 +51,24 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
       if (item[trMap.get("documentName")]) {
         if (curDocName) {
           //把之前上一个文件的数据收集起来放进去
-          outFolder.forEach((fold) => {
-            const writeData = JSON.stringify(resultObj[fold], undefined, "\t");
-            const writePath =
-              path.join(outFolderPath, fold, curDocName!) + ".js";
-            //支持documentName同名情况
-            if (fs.existsSync(writePath)) {
-              //如果有同名追加进去
-              execSync(`sed -i '' -e '$d' ${curDocName}.js`, {
-                cwd: path.join(outFolderPath, fold),
-              });
-              fs.writeFileSync(writePath, `,${writeData.slice(1)}`, {
-                flag: "a",
-              });
-            } else {
-              fs.writeFileSync(writePath, `export default ${writeData}`);
-            }
-          });
+          if (resultMap.has(curDocName)) {
+            console.log("curDocName", curDocName);
+            //追加
+            const pervDocVal = resultMap.get(curDocName);
+            resultMap.set(curDocName, _.merge(pervDocVal, resultObj));
+          } else {
+            resultMap.set(curDocName, _.cloneDeep(resultObj));
+          }
         }
         //跳出循环
         if (item[trMap.get("documentName")] === "end") {
+          for (const [key, val] of resultMap) {
+            outFolder.forEach((fold) => {
+              const writeData = JSON.stringify(val[fold], undefined, "\t");
+              const writePath = path.join(outFolderPath, fold, key!) + ".js";
+              fs.writeFileSync(writePath, `export default ${writeData}`);
+            });
+          }
           return false;
         }
         curDocName = item[trMap.get("documentName")];
@@ -83,13 +82,14 @@ export function i18nExcel({ inDir, outDir, name, lang }: CommanderQuery) {
       if (!key) {
         throw new Error(`在${index + 1}那一行，内容是${item}，的key为空 `);
       }
-      const keyArr = key.split(".");
       lang.forEach((langItem) => {
+        const curLangIdx = trMap.get(langItem);
+        if (!curLangIdx) {
+          throw new Error(`在${item}key值是${key},${langItem}语言的值为空`);
+        }
+        const keyArr = key.split(".");
         keyArr.reduce((perv, keyItem: string, index: number) => {
           if (index === keyArr.length - 1) {
-            if (!item[trMap.get(langItem)]) {
-              throw new Error(`在${item}key值是${key},${langItem}语言的值为空`);
-            }
             if (perv[keyItem]) {
               throw new Error(
                 `在${item}那一行,key值重复了,key在同一个documentName应该唯一`

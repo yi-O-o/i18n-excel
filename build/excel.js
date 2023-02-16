@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.i18nExcel = void 0;
 const tslib_1 = require("tslib");
 const node_xlsx_1 = tslib_1.__importDefault(require("node-xlsx"));
-const child_process_1 = require("child_process");
+const lodash_1 = tslib_1.__importDefault(require("lodash"));
 const path_1 = tslib_1.__importDefault(require("path"));
 const fs_1 = tslib_1.__importDefault(require("fs"));
 let excelFilePath;
@@ -11,6 +11,8 @@ let outFolderPath;
 let needFindKey;
 const resultObj = {};
 const trMap = new Map();
+//为什么要用map不用object 因为map有序
+const resultMap = new Map(); //收集数据
 function i18nExcel({ inDir, outDir, name, lang }) {
     excelFilePath = inDir;
     outFolderPath = path_1.default.join(outDir, name);
@@ -35,10 +37,9 @@ function i18nExcel({ inDir, outDir, name, lang }) {
         else {
             if (!trMap.has(needFindKey[i])) {
                 trMap.set(needFindKey[i], index);
-                needFindKey[i] !== "documentName" &&
-                    Object.assign(resultObj, {
-                        [needFindKey[i]]: {},
-                    });
+                if (!["key", "documentName"].includes(needFindKey[i])) {
+                    resultObj[needFindKey[i]] = {};
+                }
             }
         }
     }
@@ -52,26 +53,24 @@ function i18nExcel({ inDir, outDir, name, lang }) {
             if (item[trMap.get("documentName")]) {
                 if (curDocName) {
                     //把之前上一个文件的数据收集起来放进去
-                    outFolder.forEach((fold) => {
-                        const writeData = JSON.stringify(resultObj[fold], undefined, "\t");
-                        const writePath = path_1.default.join(outFolderPath, fold, curDocName) + ".js";
-                        //支持documentName同名情况
-                        if (fs_1.default.existsSync(writePath)) {
-                            //如果有同名追加进去
-                            (0, child_process_1.execSync)(`sed -i '' -e '$d' ${curDocName}.js`, {
-                                cwd: path_1.default.join(outFolderPath, fold),
-                            });
-                            fs_1.default.writeFileSync(writePath, `,${writeData.slice(1)}`, {
-                                flag: "a",
-                            });
-                        }
-                        else {
-                            fs_1.default.writeFileSync(writePath, `export default ${writeData}`);
-                        }
-                    });
+                    if (resultMap.has(curDocName)) {
+                        //追加
+                        const pervDocVal = resultMap.get(curDocName);
+                        resultMap.set(curDocName, lodash_1.default.merge(pervDocVal, resultObj));
+                    }
+                    else {
+                        resultMap.set(curDocName, lodash_1.default.cloneDeep(resultObj));
+                    }
                 }
                 //跳出循环
                 if (item[trMap.get("documentName")] === "end") {
+                    for (const [key, val] of resultMap) {
+                        outFolder.forEach((fold) => {
+                            const writeData = JSON.stringify(val[fold], undefined, "\t");
+                            const writePath = path_1.default.join(outFolderPath, fold, key) + ".js";
+                            fs_1.default.writeFileSync(writePath, `export default ${writeData}`);
+                        });
+                    }
                     return false;
                 }
                 curDocName = item[trMap.get("documentName")];
@@ -84,13 +83,14 @@ function i18nExcel({ inDir, outDir, name, lang }) {
             if (!key) {
                 throw new Error(`在${index + 1}那一行，内容是${item}，的key为空 `);
             }
-            const keyArr = key.split(".");
             lang.forEach((langItem) => {
+                const curLangIdx = trMap.get(langItem);
+                if (!curLangIdx) {
+                    throw new Error(`在${item}key值是${key},${langItem}语言的值为空`);
+                }
+                const keyArr = key.split(".");
                 keyArr.reduce((perv, keyItem, index) => {
                     if (index === keyArr.length - 1) {
-                        if (!item[trMap.get(langItem)]) {
-                            throw new Error(`在${item}key值是${key},${langItem}语言的值为空`);
-                        }
                         if (perv[keyItem]) {
                             throw new Error(`在${item}那一行,key值重复了,key在同一个documentName应该唯一`);
                         }
